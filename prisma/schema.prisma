@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  FAMILY
+  ELDER
+  CAREGIVER
+}
+
+enum VisitStatus {
+  SCHEDULED
+  CAREGIVER_DISPATCHED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AlertStatus {
+  TRIGGERED
+  CAREGIVER_ASSIGNED
+  RESOLVED
+  FALSE_ALARM
+}
+
+enum VitalType {
+  BLOOD_PRESSURE
+  HEART_RATE
+  BLOOD_OXYGEN
+  WEIGHT
+  BLOOD_SUGAR
+}
+
+enum PlanTier {
+  BASIC
+  STANDARD
+  PREMIUM
+  ELITE
+}
+
+enum PaymentStatus {
+  CREATED
+  PAID
+  FAILED
+}
+
+model Subscription {
+  id                String        @id @default(cuid())
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId            String
+  plan              PlanTier
+  amountPaise       Int
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?
+  status            PaymentStatus @default(CREATED)
+  createdAt         DateTime      @default(now())
+  activeUntil       DateTime?
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @unique
+  password  String
+  role      Role
+  city      String?
+  dob       String?
+  bloodGroup String?
+  language  String?
+  rating    Float?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Family -> Elder links where this user is the family member
+  familyLinksAsFamily FamilyLink[] @relation("FamilyUser")
+  // Family -> Elder links where this user is the elder
+  familyLinksAsElder  FamilyLink[] @relation("ElderUser")
+
+  visitsAsElder     Visit[] @relation("ElderVisits")
+  visitsAsCaregiver Visit[] @relation("CaregiverVisits")
+
+  alerts    Alert[]
+  vitals    Vital[]
+  medicines Medicine[]
+
+  caregiverMeta CaregiverMeta?
+  subscriptions Subscription[]
+}
+
+model FamilyLink {
+  id        String  @id @default(cuid())
+  family    User    @relation("FamilyUser", fields: [familyId], references: [id], onDelete: Cascade)
+  familyId  String
+  elder     User    @relation("ElderUser", fields: [elderId], references: [id], onDelete: Cascade)
+  elderId   String
+  relation  String
+  isPrimary Boolean @default(true)
+
+  @@unique([familyId, elderId])
+}
+
+model Visit {
+  id             String      @id @default(cuid())
+  elder          User        @relation("ElderVisits", fields: [elderId], references: [id], onDelete: Cascade)
+  elderId        String
+  caregiver      User?       @relation("CaregiverVisits", fields: [caregiverId], references: [id])
+  caregiverId    String?
+  serviceType    String
+  scheduledStart DateTime
+  scheduledEnd   DateTime
+  status         VisitStatus @default(SCHEDULED)
+  notes          String?
+  createdAt      DateTime    @default(now())
+}
+
+model Alert {
+  id              String      @id @default(cuid())
+  elder           User        @relation(fields: [elderId], references: [id], onDelete: Cascade)
+  elderId         String
+  source          String
+  status          AlertStatus @default(TRIGGERED)
+  triggeredAt     DateTime    @default(now())
+  resolvedAt      DateTime?
+  resolutionNotes String?
+}
+
+model Vital {
+  id        String    @id @default(cuid())
+  elder     User      @relation(fields: [elderId], references: [id], onDelete: Cascade)
+  elderId   String
+  type      VitalType
+  value     String
+  timestamp DateTime  @default(now())
+}
+
+model Medicine {
+  id            String   @id @default(cuid())
+  elder         User     @relation(fields: [elderId], references: [id], onDelete: Cascade)
+  elderId       String
+  name          String
+  time          String
+  taken         Boolean  @default(false)
+  lastTakenDate String?
+}
+
+model CaregiverMeta {
+  id            String   @id @default(cuid())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId        String   @unique
+  activeVisitId String?
+  onDuty        Boolean  @default(false)
+}
