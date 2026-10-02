@@ -13,7 +13,7 @@ const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
  */
 export async function sendSms(to: string, body: string): Promise<{ sent: boolean; error?: string }> {
   if (!client || !fromNumber) {
-    console.warn(`[sms:not-configured] Would send to ${to}: ${body}`);
+    console.warn("[sms:not-configured] SOS notification skipped.");
     return { sent: false, error: "SMS not configured (missing TWILIO_* env vars)" };
   }
 
@@ -24,12 +24,20 @@ export async function sendSms(to: string, body: string): Promise<{ sent: boolean
     await client.messages.create({ to: formattedTo, from: fromNumber, body });
     return { sent: true };
   } catch (err) {
-    console.error("[sms:error]", err);
-    return { sent: false, error: err instanceof Error ? err.message : "Unknown SMS error" };
+    const code =
+      typeof err === "object" && err !== null && "code" in err && typeof err.code === "number"
+        ? err.code
+        : undefined;
+    console.error("[sms:error] Twilio delivery failed.", code ? { code } : undefined);
+    return { sent: false, error: "SMS delivery failed" };
   }
 }
 
 export async function notifyFamilyOfSos(elderName: string, familyPhones: string[]) {
   const body = `SETU ALERT: ${elderName} has triggered an SOS. Please check the app or call them now.`;
-  await Promise.all(familyPhones.map((phone) => sendSms(phone, body)));
+  const results = await Promise.all(familyPhones.map((phone) => sendSms(phone, body)));
+  return {
+    attempted: results.length,
+    sent: results.filter((result) => result.sent).length,
+  };
 }

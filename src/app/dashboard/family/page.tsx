@@ -6,6 +6,8 @@ import StatusPill from "@/components/StatusPill";
 import BookVisitForm from "@/components/family/BookVisitForm";
 import ResolveAlertButton from "@/components/ResolveAlertButton";
 import CheckoutButton from "@/components/billing/CheckoutButton";
+import { billingEnabled } from "@/lib/razorpay";
+import { isMedicineTakenToday } from "@/lib/medicine";
 
 export default async function FamilyDashboard() {
   const user = await getCurrentUser();
@@ -22,7 +24,9 @@ export default async function FamilyDashboard() {
     const upcomingVisit = db.visits
       .filter((v) => v.elderId === elder.id && v.status === "SCHEDULED")
       .sort((a, b) => new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime())[0];
-    const medicines = db.medicines.filter((m) => m.elderId === elder.id);
+    const medicines = db.medicines
+      .filter((m) => m.elderId === elder.id)
+      .map((medicine) => ({ ...medicine, taken: isMedicineTakenToday(medicine) }));
     const takenCount = medicines.filter((m) => m.taken).length;
     return { elder, relation: l.relation, openAlert, upcomingVisit, medicines, takenCount };
   });
@@ -138,12 +142,16 @@ export default async function FamilyDashboard() {
         <h2 className="font-display text-lg text-ink mb-4">Subscription</h2>
         <div className="bg-card rounded-2xl p-6 border border-border-soft flex flex-wrap items-center gap-4 justify-between">
           <p className="text-sm text-ink/60 max-w-md">
-            Upgrade for more visits, faster emergency response, and a dedicated care manager.
+            {billingEnabled
+              ? "Choose a plan for your family."
+              : "Subscriptions are disabled in this demo until paid plan benefits can be provided."}
           </p>
-          <div className="flex gap-3">
-            <CheckoutButton plan="STANDARD" label="Upgrade to Standard — ₹1,499/mo" />
-            <CheckoutButton plan="PREMIUM" label="Upgrade to Premium — ₹2,999/mo" />
-          </div>
+          {billingEnabled && (
+            <div className="flex gap-3">
+              <CheckoutButton plan="STANDARD" label="Upgrade to Standard — ₹1,499/mo" />
+              <CheckoutButton plan="PREMIUM" label="Upgrade to Premium — ₹2,999/mo" />
+            </div>
+          )}
         </div>
       </section>
     </DashboardShell>

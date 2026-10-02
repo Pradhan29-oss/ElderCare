@@ -7,24 +7,33 @@ export default function SosButton({ elderId, hasActiveAlert }: { elderId: string
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function sendAlert() {
     setLoading(true);
-    await fetch("/api/alerts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ elderId, source: "SOS_BUTTON" }),
-    });
-    setLoading(false);
-    setConfirming(false);
-    router.refresh();
+    setError(null);
+    try {
+      const response = await fetch("/api/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ elderId, source: "SOS_BUTTON" }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not send the emergency alert.");
+      setConfirming(false);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reach the server. Call 112 if you need urgent help.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (hasActiveAlert) {
     return (
       <div className="w-full py-8 rounded-3xl bg-alert/10 border-2 border-alert text-center">
-        <p className="text-2xl font-semibold text-alert mb-1">Help is on the way</p>
-        <p className="text-base text-ink/60">Your family and a caregiver have been notified.</p>
+        <p className="text-2xl font-semibold text-alert mb-1">Alert recorded</p>
+        <p className="text-base text-ink/60">Your emergency alert has been recorded. Call 112 if you need immediate help.</p>
       </div>
     );
   }
@@ -33,6 +42,7 @@ export default function SosButton({ elderId, hasActiveAlert }: { elderId: string
     return (
       <div className="w-full py-8 rounded-3xl bg-alert/10 border-2 border-alert text-center space-y-4">
         <p className="text-2xl font-semibold text-alert">Send emergency alert?</p>
+        {error && <p role="alert" className="text-sm text-alert">{error}</p>}
         <div className="flex justify-center gap-4">
           <button
             onClick={sendAlert}

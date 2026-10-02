@@ -56,6 +56,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const elder = await prisma.user.findUnique({
+    where: { id: elderId },
+    select: { role: true },
+  });
+  if (!elder || elder.role !== "ELDER") {
+    return NextResponse.json({ error: "Elder not found." }, { status: 404 });
+  }
+
   const start = new Date(scheduledStart);
   const end = new Date(scheduledEnd);
   if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {

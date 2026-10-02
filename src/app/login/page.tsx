@@ -90,25 +90,27 @@ export default function LoginPage() {
           </Link>
         </p>
 
-        <div className="mt-10 border-t border-border-soft pt-6">
-          <p className="text-xs font-mono-data uppercase tracking-widest text-ink/40 mb-3">Demo accounts</p>
-          <div className="grid grid-cols-2 gap-2">
-            {demoAccounts.map((a) => (
-              <button
-                key={a.role}
-                type="button"
-                onClick={() => {
-                  setPhone(a.phone);
-                  setPassword(a.password);
-                }}
-                className="text-left px-3 py-2 rounded-lg border border-border-soft text-xs hover:border-marigold transition"
-              >
-                <span className="block font-semibold text-ink">{a.role}</span>
-                <span className="text-ink/50 font-mono-data">{a.phone}</span>
-              </button>
-            ))}
+        {process.env.NODE_ENV !== "production" && (
+          <div className="mt-10 border-t border-border-soft pt-6">
+            <p className="text-xs font-mono-data uppercase tracking-widest text-ink/40 mb-3">Demo accounts</p>
+            <div className="grid grid-cols-2 gap-2">
+              {demoAccounts.map((a) => (
+                <button
+                  key={a.role}
+                  type="button"
+                  onClick={() => {
+                    setPhone(a.phone);
+                    setPassword(a.password);
+                  }}
+                  className="text-left px-3 py-2 rounded-lg border border-border-soft text-xs hover:border-marigold transition"
+                >
+                  <span className="block font-semibold text-ink">{a.role}</span>
+                  <span className="text-ink/50 font-mono-data">{a.phone}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

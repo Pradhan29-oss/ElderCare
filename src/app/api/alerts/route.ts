@@ -5,17 +5,29 @@ import { canAccessElder } from "@/lib/access";
 import { alertCreateSchema, firstZodError } from "@/lib/validation";
 import { notifyFamilyOfSos } from "@/lib/sms";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { Prisma } from "@prisma/client";
 
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let where = {};
+  let where: Prisma.AlertWhereInput = {};
   if (session.role === "FAMILY") {
     const links = await prisma.familyLink.findMany({ where: { familyId: session.userId } });
     where = { elderId: { in: links.map((l) => l.elderId) } };
   } else if (session.role === "ELDER") {
     where = { elderId: session.userId };
+  } else if (session.role === "CAREGIVER") {
+    where = {
+      elder: {
+        visitsAsElder: {
+          some: {
+            caregiverId: session.userId,
+            status: { in: ["SCHEDULED", "CAREGIVER_DISPATCHED", "IN_PROGRESS"] },
+          },
+        },
+      },
+    };
   }
 
   const alerts = await prisma.alert.findMany({
@@ -55,18 +67,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Elder not found." }, { status: 404 });
   }
 
+  const links = await prisma.familyLink.findMany({
+    where: { elderId },
+    include: { family: { select: { phone: true } } },
+  });
   const alert = await prisma.alert.create({
     data: { elderId, source: parsed.data.source || "SOS_BUTTON", status: "TRIGGERED" },
   });
 
-  // Fire-and-forget SMS to every linked family member — doesn't block the response
-  prisma.familyLink
-    .findMany({ where: { elderId }, include: { family: { select: { phone: true } } } })
-    .then((links) => {
-      const phones = links.map((l) => l.family.phone).filter(Boolean);
-      if (phones.length > 0) notifyFamilyOfSos(elder.name, phones);
-    })
-    .catch((err) => console.error("[sos-sms] failed to notify family", err));
+  const notification = await notifyFamilyOfSos(
+    elder.name,
+    links.map((link) => link.family.phone).filter(Boolean)
+  );
 
-  return NextResponse.json({ alert });
+  if (notification.sent < notification.attempted) {
+    console.warn("[sos-sms] One or more family notifications were not delivered.", notification);
+  }
+
+  return NextResponse.json({ alert, notification });
 }

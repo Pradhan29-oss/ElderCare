@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function DashboardShell({
@@ -13,11 +14,18 @@ export default function DashboardShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
+    setError(null);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("Could not log out. Please try again.");
+      router.push("/login");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reach the server. Try again.");
+    }
   }
 
   return (
@@ -38,6 +46,7 @@ export default function DashboardShell({
             </button>
           </div>
         </div>
+        {error && <p role="alert" className="max-w-6xl mx-auto px-6 pb-3 text-sm text-alert">{error}</p>}
       </header>
       <main className="flex-1 max-w-6xl mx-auto w-full px-6 py-8">{children}</main>
     </div>

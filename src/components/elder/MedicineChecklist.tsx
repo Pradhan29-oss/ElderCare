@@ -13,16 +13,25 @@ interface Medicine {
 export default function MedicineChecklist({ medicines }: { medicines: Medicine[] }) {
   const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function markTaken(id: string) {
     setLoadingId(id);
-    await fetch(`/api/medicines/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ taken: true, lastTakenDate: new Date().toISOString().slice(0, 10) }),
-    });
-    setLoadingId(null);
-    router.refresh();
+    setError(null);
+    try {
+      const response = await fetch(`/api/medicines/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taken: true }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not update this medicine.");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reach the server. Try again.");
+    } finally {
+      setLoadingId(null);
+    }
   }
 
   return (
@@ -51,6 +60,7 @@ export default function MedicineChecklist({ medicines }: { medicines: Medicine[]
           )}
         </div>
       ))}
+      {error && <p role="alert" className="text-sm text-alert">{error}</p>}
       {medicines.length === 0 && <p className="text-lg text-ink/50">No medicines scheduled today.</p>}
     </div>
   );

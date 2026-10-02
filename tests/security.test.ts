@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { registerSchema, loginSchema } from "../src/lib/validation";
 import { rateLimit } from "../src/lib/rate-limit";
 import { verifyPaymentSignature, verifyWebhookSignature } from "../src/lib/razorpay-signature";
+import { getIndiaCalendarDate, isMedicineTakenToday } from "../src/lib/medicine";
 
 const base = { name: "Test User", phone: "9876543210", password: "secret123", role: "FAMILY" as const };
 
@@ -41,6 +42,25 @@ describe("razorpay signatures", () => {
   it("rejects empty / garbage signature", () => {
     expect(verifyPaymentSignature("order_1", "pay_1", "", secret)).toBe(false);
     expect(verifyPaymentSignature("order_1", "pay_1", "zzzz", secret)).toBe(false);
+  });
+
+  describe("daily medicine tracking", () => {
+    const afterIndiaMidnight = new Date("2026-09-28T20:00:00.000Z");
+
+    it("uses the India calendar day across UTC date boundaries", () => {
+      expect(getIndiaCalendarDate(afterIndiaMidnight)).toBe("2026-09-29");
+    });
+    it("only treats a dose as taken on its recorded India calendar day", () => {
+      expect(
+        isMedicineTakenToday({ taken: true, lastTakenDate: "2026-09-29" }, afterIndiaMidnight)
+      ).toBe(true);
+      expect(
+        isMedicineTakenToday({ taken: true, lastTakenDate: "2026-09-28" }, afterIndiaMidnight)
+      ).toBe(false);
+      expect(
+        isMedicineTakenToday({ taken: false, lastTakenDate: "2026-09-29" }, afterIndiaMidnight)
+      ).toBe(false);
+    });
   });
   it("webhook: valid vs forged body", () => {
     const body = '{"event":"payment.captured"}';

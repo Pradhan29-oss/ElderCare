@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Script from "next/script";
+import { useRouter } from "next/navigation";
 
 type Plan = "BASIC" | "STANDARD" | "PREMIUM" | "ELITE";
 
@@ -12,6 +13,7 @@ declare global {
 }
 
 export default function CheckoutButton({ plan, label }: { plan: Plan; label: string }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +28,7 @@ export default function CheckoutButton({ plan, label }: { plan: Plan; label: str
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not start checkout.");
+      if (!window.Razorpay) throw new Error("Payment checkout is still loading. Please try again.");
 
       const rzp = new window.Razorpay({
         key: data.keyId,
@@ -39,15 +42,17 @@ export default function CheckoutButton({ plan, label }: { plan: Plan; label: str
           razorpay_payment_id: string;
           razorpay_signature: string;
         }) {
-          const verifyRes = await fetch("/api/billing/verify", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(response),
-          });
-          if (verifyRes.ok) {
-            window.location.href = "/dashboard/family?payment=success";
-          } else {
-            setError("Payment could not be verified. Please contact support.");
+          try {
+            const verifyRes = await fetch("/api/billing/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(response),
+            });
+            const verification = await verifyRes.json();
+            if (!verifyRes.ok) throw new Error(verification.error || "Payment verification failed.");
+            router.push("/dashboard/family?payment=success");
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Payment could not be verified. Please contact support.");
           }
         },
         theme: { color: "#1c3a35" },

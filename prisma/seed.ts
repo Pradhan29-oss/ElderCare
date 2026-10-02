@@ -1,9 +1,12 @@
-import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
 import bcrypt from "bcryptjs";
-
-const prisma = new PrismaClient();
+import { prisma } from "../src/lib/prisma";
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Refusing to create public demo accounts in production.");
+  }
+
   const admin = await prisma.user.upsert({
     where: { phone: "9800000001" },
     update: {},

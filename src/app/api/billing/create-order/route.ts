@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { razorpay, PLAN_PRICES_PAISE } from "@/lib/razorpay";
+import { billingEnabled, razorpay, PLAN_PRICES_PAISE } from "@/lib/razorpay";
 import { z } from "zod";
 
 const bodySchema = z.object({ plan: z.enum(["BASIC", "STANDARD", "PREMIUM", "ELITE"]) });
@@ -9,10 +9,13 @@ const bodySchema = z.object({ plan: z.enum(["BASIC", "STANDARD", "PREMIUM", "ELI
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (session.role !== "FAMILY") {
+    return NextResponse.json({ error: "Only family accounts can purchase a subscription." }, { status: 403 });
+  }
 
-  if (!razorpay) {
+  if (!billingEnabled || !razorpay) {
     return NextResponse.json(
-      { error: "Payments aren't configured yet. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET." },
+      { error: "Subscription purchases are unavailable until plan benefits are ready." },
       { status: 503 }
     );
   }

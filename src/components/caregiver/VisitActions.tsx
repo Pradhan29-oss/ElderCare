@@ -8,20 +8,30 @@ export default function VisitActions({ visitId, status }: { visitId: string; sta
   const [loading, setLoading] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   async function updateStatus(newStatus: string, extra: Record<string, unknown> = {}) {
     setLoading(true);
-    await fetch(`/api/visits/${visitId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus, ...extra }),
-    });
-    setLoading(false);
-    router.refresh();
+    setError(null);
+    try {
+      const response = await fetch(`/api/visits/${visitId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus, ...extra }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not update this visit.");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reach the server. Try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (status === "SCHEDULED") {
     return (
+      <>
       <button
         disabled={loading}
         onClick={() => updateStatus("IN_PROGRESS")}
@@ -29,6 +39,8 @@ export default function VisitActions({ visitId, status }: { visitId: string; sta
       >
         Check in
       </button>
+      {error && <p role="alert" className="text-sm text-alert mt-2">{error}</p>}
+      </>
     );
   }
 
@@ -45,6 +57,7 @@ export default function VisitActions({ visitId, status }: { visitId: string; sta
 
   if (status === "IN_PROGRESS" && showReport) {
     return (
+      <>
       <div className="w-full mt-2 space-y-2">
         <textarea
           value={notes}
@@ -61,6 +74,8 @@ export default function VisitActions({ visitId, status }: { visitId: string; sta
           {loading ? "Saving…" : "Submit report"}
         </button>
       </div>
+      {error && <p role="alert" className="text-sm text-alert">{error}</p>}
+      </>
     );
   }
 

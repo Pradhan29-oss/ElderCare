@@ -1,17 +1,17 @@
 import Link from "next/link";
 
 const services = [
-  { title: "Wellness visits", desc: "A trained companion checks in, in person, on your schedule." },
-  { title: "Hospital companion", desc: "Pickup, consultation support, prescriptions, and a summary for you." },
-  { title: "Medicine reminders", desc: "Doses tracked and missed-dose alerts sent the moment they happen." },
-  { title: "One-tap SOS", desc: "Emergency alerts reach you and the nearest caregiver within seconds." },
+  { title: "Visit coordination", desc: "Book elder-care visits and track assigned caregiver updates." },
+  { title: "Care coordination", desc: "Keep family members informed about visits and care activity." },
+  { title: "Medicine tracking", desc: "Record medicine schedules and let elders mark doses as taken." },
+  { title: "One-tap SOS", desc: "Create an emergency alert and attempt SMS to linked family when configured." },
 ];
 
 const plans = [
-  { name: "Basic", price: "₹499", period: "/mo", features: ["Weekly wellness call", "Dashboard access"] },
-  { name: "Standard", price: "₹1,499", period: "/mo", features: ["Home visits", "Medicine reminders", "Emergency support"], highlight: false },
-  { name: "Premium", price: "₹2,999", period: "/mo", features: ["Hospital assistance", "Dedicated care manager", "AI monitoring"], highlight: true },
-  { name: "Elite", price: "₹5,999", period: "/mo", features: ["Unlimited support", "Priority emergencies", "Concierge assistance"] },
+  { name: "Basic", price: "₹499", period: "/mo" },
+  { name: "Standard", price: "₹1,499", period: "/mo" },
+  { name: "Premium", price: "₹2,999", period: "/mo" },
+  { name: "Elite", price: "₹5,999", period: "/mo" },
 ];
 
 export default function Home() {
@@ -44,9 +44,8 @@ export default function Home() {
             <span className="italic">Your peace of mind,</span> anywhere.
           </h1>
           <p className="text-base sm:text-lg text-ink/70 max-w-md mb-8 leading-relaxed">
-            Setu connects families abroad and across cities with trained caregivers, health
-            monitoring, and emergency response for the elders they love — built for India,
-            in India&rsquo;s languages.
+            Setu helps families coordinate elder visits, track medicines, and raise emergency
+            alerts for the people they love.
           </p>
           <div className="flex flex-wrap gap-4">
             <Link
@@ -108,13 +107,16 @@ export default function Home() {
 
       {/* Plans */}
       <section className="max-w-6xl mx-auto px-6 sm:px-10 py-20">
-        <h2 className="font-display text-2xl sm:text-3xl text-ink mb-10">Plans for every family</h2>
+        <h2 className="font-display text-2xl sm:text-3xl text-ink mb-3">Sample monthly plan pricing</h2>
+        <p className="text-sm text-ink/60 mb-10">
+          These are demo prices only. Billing is disabled until the listed service benefits can be provided.
+        </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {plans.map((p) => (
             <div
               key={p.name}
               className={`rounded-2xl p-6 border flex flex-col ${
-                p.highlight ? "border-marigold bg-marigold/10" : "border-border-soft bg-card"
+                p.name === "Premium" ? "border-marigold bg-marigold/10" : "border-border-soft bg-card"
               }`}
             >
               <h3 className="font-semibold text-ink mb-1">{p.name}</h3>
@@ -122,18 +124,12 @@ export default function Home() {
                 {p.price}
                 <span className="text-sm font-sans text-ink/50">{p.period}</span>
               </p>
-              <ul className="space-y-2 mb-6 flex-1">
-                {p.features.map((f) => (
-                  <li key={f} className="text-sm text-ink/70 flex gap-2">
-                    <span className="text-sage">✓</span> {f}
-                  </li>
-                ))}
-              </ul>
+              <p className="text-sm text-ink/60 mb-6 flex-1">Demo pricing only — subscription benefits are not active.</p>
               <Link
                 href="/register"
                 className="text-center px-4 py-2 rounded-full text-sm font-medium bg-ink text-sand hover:bg-[#152f2b] transition"
               >
-                Choose {p.name}
+                Get started
               </Link>
             </div>
           ))}

@@ -6,19 +6,29 @@ import { useRouter } from "next/navigation";
 export default function ResolveAlertButton({ alertId }: { alertId: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function resolve(status: "RESOLVED" | "FALSE_ALARM") {
     setLoading(true);
-    await fetch(`/api/alerts/${alertId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    setLoading(false);
-    router.refresh();
+    setError(null);
+    try {
+      const response = await fetch(`/api/alerts/${alertId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not update this alert.");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reach the server. Try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
+    <>
     <div className="flex gap-2">
       <button
         disabled={loading}
@@ -35,5 +45,7 @@ export default function ResolveAlertButton({ alertId }: { alertId: string }) {
         False alarm
       </button>
     </div>
+    {error && <p role="alert" className="text-xs text-alert mt-2">{error}</p>}
+    </>
   );
 }

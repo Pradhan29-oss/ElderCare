@@ -4,6 +4,7 @@ import { readDb } from "@/lib/db";
 import DashboardShell from "@/components/DashboardShell";
 import SosButton from "@/components/elder/SosButton";
 import MedicineChecklist from "@/components/elder/MedicineChecklist";
+import { isMedicineTakenToday } from "@/lib/medicine";
 
 export default async function ElderDashboard() {
   const user = await getCurrentUser();
@@ -14,7 +15,9 @@ export default async function ElderDashboard() {
   const hasActiveAlert = db.alerts.some(
     (a) => a.elderId === user.id && (a.status === "TRIGGERED" || a.status === "CAREGIVER_ASSIGNED")
   );
-  const medicines = db.medicines.filter((m) => m.elderId === user.id);
+  const medicines = db.medicines
+    .filter((m) => m.elderId === user.id)
+    .map((medicine) => ({ ...medicine, taken: isMedicineTakenToday(medicine) }));
   const upcomingVisit = db.visits
     .filter((v) => v.elderId === user.id && v.status === "SCHEDULED")
     .sort((a, b) => new Date(a.scheduledStart).getTime() - new Date(b.scheduledStart).getTime())[0];

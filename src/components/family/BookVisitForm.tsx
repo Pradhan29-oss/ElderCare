@@ -20,26 +20,35 @@ export default function BookVisitForm({ elders }: { elders: { id: string; name: 
   const [date, setDate] = useState("");
   const [time, setTime] = useState("10:00");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const start = new Date(`${date}T${time}:00`);
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
-    await fetch("/api/visits", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        elderId,
-        serviceType,
-        scheduledStart: start.toISOString(),
-        scheduledEnd: end.toISOString(),
-      }),
-    });
-    setLoading(false);
-    setOpen(false);
-    setDate("");
-    router.refresh();
+    setError(null);
+    try {
+      const start = new Date(`${date}T${time}:00`);
+      const end = new Date(start.getTime() + 60 * 60 * 1000);
+      const response = await fetch("/api/visits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          elderId,
+          serviceType,
+          scheduledStart: start.toISOString(),
+          scheduledEnd: end.toISOString(),
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not book this visit.");
+      setOpen(false);
+      setDate("");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not reach the server. Try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   if (!open) {
@@ -101,6 +110,7 @@ export default function BookVisitForm({ elders }: { elders: { id: string; name: 
           />
         </div>
       </div>
+      {error && <p role="alert" className="text-sm text-alert">{error}</p>}
       <div className="flex gap-2">
         <button
           type="submit"

@@ -15,10 +15,10 @@ and an admin overview.
 ## 1. Local setup
 
 ```bash
-npm install
 cp .env.example .env
 # edit .env and paste your real Postgres connection string + a random JWT_SECRET
-npx prisma migrate dev --name init   # creates tables
+npm install
+npx prisma migrate dev --name init   # creates tables and the initial migration
 npm run db:seed                       # optional: demo accounts (see below)
 npm run dev
 ```
@@ -65,22 +65,24 @@ be created on deploy.
    - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` — from the Razorpay dashboard (Settings → API Keys)
    - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` — from the Twilio console
 4. Deploy. The build script (`prisma generate && prisma migrate deploy && next build`)
-   applies your committed migrations automatically.
-5. (Optional) Run `npm run db:seed` once locally against the **production**
-   `DATABASE_URL` if you want the demo accounts live too.
+   applies your committed migrations automatically. Prisma 7 reads the database
+   URL from `prisma.config.ts` and uses the PostgreSQL driver adapter at runtime.
+5. Do not seed production with the public demo accounts. `npm run db:seed` is
+   intended for local development only.
 
 ### Payments & SMS are optional at deploy time
-If you don't set the Razorpay/Twilio env vars, the app still works —
-checkout returns a friendly "not configured" error instead of crashing, and
-SOS alerts log to the console instead of sending SMS. Add the real keys
-whenever you're ready to go live with billing/notifications.
+Billing is disabled by default because this MVP does not yet provision the
+advertised plan benefits. Keep `BILLING_ENABLED=false` until service fulfillment
+and access entitlements are implemented. SOS attempts Twilio delivery to linked
+family members when Twilio is configured; otherwise the app reports that no SMS
+was sent. Add real keys only after verifying the target environment.
 
 ## What's in this build
 
 - **Auth**: JWT session cookies, bcrypt-hashed passwords, rate-limited login/register (stops brute-force)
 - **Validation**: every API route validates input with Zod before touching the database
 - **Payments**: Razorpay checkout on the family dashboard, server-side signature verification (never trusts the client alone)
-- **SMS**: SOS alerts text every linked family member via Twilio automatically
+- **SMS**: SOS requests attempt delivery to linked family through Twilio when configured; delivery results are returned to the app
 - **Authorization**: family members can only book visits / see data for elders actually linked to their account
 
 ## What's still an MVP, not the full spec

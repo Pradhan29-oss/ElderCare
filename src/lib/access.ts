@@ -8,11 +8,18 @@ export async function canAccessElder(session: SessionPayload, elderId: string): 
   if (session.role === "FAMILY") {
     const link = await prisma.familyLink.findUnique({
       where: { familyId_elderId: { familyId: session.userId, elderId } },
+      include: { elder: { select: { role: true } } },
     });
-    return !!link;
+    return link?.elder.role === "ELDER";
   }
   if (session.role === "CAREGIVER") {
-    const visit = await prisma.visit.findFirst({ where: { elderId, caregiverId: session.userId } });
+    const visit = await prisma.visit.findFirst({
+      where: {
+        elderId,
+        caregiverId: session.userId,
+        status: { in: ["SCHEDULED", "CAREGIVER_DISPATCHED", "IN_PROGRESS"] },
+      },
+    });
     return !!visit;
   }
   return false;

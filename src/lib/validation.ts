@@ -56,7 +56,6 @@ export const medicineCreateSchema = z.object({
 
 export const medicineUpdateSchema = z.object({
   taken: z.boolean().optional(),
-  lastTakenDate: z.string().optional(),
   name: z.string().trim().min(1).max(200).optional(),
   time: z.string().trim().min(1).max(20).optional(),
 });

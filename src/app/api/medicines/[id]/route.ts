@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { canAccessElder } from "@/lib/access";
 import { medicineUpdateSchema, firstZodError } from "@/lib/validation";
+import { getIndiaCalendarDate } from "@/lib/medicine";
+import { Prisma } from "@prisma/client";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
@@ -19,7 +21,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!existing) return NextResponse.json({ error: "Medicine not found." }, { status: 404 });
 
   if (!(await canAccessElder(session, existing.elderId))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  const medicine = await prisma.medicine.update({ where: { id }, data: parsed.data });
+  const data: Prisma.MedicineUpdateInput = {};
+  if (parsed.data.name !== undefined) data.name = parsed.data.name;
+  if (parsed.data.time !== undefined) data.time = parsed.data.time;
+  if (parsed.data.taken !== undefined) {
+    data.taken = parsed.data.taken;
+    data.lastTakenDate = parsed.data.taken ? getIndiaCalendarDate() : null;
+  }
+  const medicine = await prisma.medicine.update({ where: { id }, data });
 
   return NextResponse.json({ medicine });
 }
